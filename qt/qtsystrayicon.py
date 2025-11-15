@@ -132,7 +132,7 @@ class QtSysTrayIcon:
 
     def _create_status_icon(self) -> QSystemTrayIcon:
         import icon
-        symbolic_logo = QIcon.fromTheme(icon.BIT_LOGO_SYMBOLIC_NAME)
+        symbolic_logo = QIcon.fromTheme(icon.BIT_LOGO_SYMBOLIC)
 
         # Logo color depending on dark/light mode
         dark_mode = qttools.in_dark_mode(self.qapp)
