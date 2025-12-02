@@ -12,6 +12,7 @@ Will be refactored soon.
 from PyQt6.QtGui import QIcon
 import logger
 
+<<<<<<< Updated upstream
 # logger.debug('Checking if the current theme contains the BIT icon...')
 
 # If the current theme does not even contain the "document-save" icon
@@ -39,10 +40,49 @@ for theme in themes_to_try:
     if not QIcon.fromTheme(ICON_NAME_TO_CHECK).isNull():
         logger.debug(f'Icon "{ICON_NAME_TO_CHECK}" found in '
                      'installed theme: {QIcon.themeName()}')
+=======
+# If the current icon theme does not contain the "document-save" icon
+# try to use another well-known icon theme (if it is installed).
+# NOTE: Icon theme names are case sensitive
+""" themes_to_try = (
+    "breeze",
+    "Adwaita",
+    "Yaru",
+    "Mint-Y",
+    "elementary",
+    "mate",
+    "gnome",
+    "oxygen",
+) """
+
+ICON_SYMBOLIC_TO_CHECK = "document-save-symbolic"
+ICON_TO_CHECK = "document-save"
+
+bit_icon = QIcon.fromTheme(ICON_SYMBOLIC_TO_CHECK)
+
+# If ICON_SYMBOLIC_TO_CHECK doesn't exist, use ICON_TO_CHECK.
+if bit_icon.isNull():
+    bit_icon = QIcon.fromTheme(ICON_TO_CHECK)
+    logger.error(
+        "No supported icon theme installed (missing icons). "
+        "Please consult the project website for instructions on how to fix this."
+    )
+
+""" for theme in themes_to_try:
+    # Check if the current icon theme provides the BIT icon
+    # (otherwise the icon theme is not fully or correctly installed)
+    # and use this icon theme for all icons.
+    if not bit_icon.isNull():
+        logger.debug(
+            f'Icon "{ICON_SYMBOLIC_TO_CHECK}" or "{ICON_TO_CHECK}" found in '
+            "installed icon theme: {QIcon.themeName()}"
+        )
+>>>>>>> Stashed changes
         break
 
     # try next theme (activate it)...
     QIcon.setThemeName(theme)
+<<<<<<< Updated upstream
     logger.debug(f'Probing theme: "{theme}" '
                  f'(activated as "{QIcon.themeName()}")')
 
@@ -56,11 +96,22 @@ if QIcon.fromTheme(ICON_NAME_TO_CHECK).isNull():
 #           each installed theme:
 # https://specifications.freedesktop.org/icon-naming-spec/
 # icon-naming-spec-latest.html
+=======
+    logger.debug(
+        f'Probing icon theme: "{theme}" ' f'(activated as "{QIcon.themeName()}")'
+    ) """
+
+# NOTE: Please prefer choosing icons from the freedesktop.org specifications
+#       to improve the chance that the icon is available in each installed
+#       icon theme:
+#       https://specifications.freedesktop.org/icon-naming/latest/
+>>>>>>> Stashed changes
 #
 # If there is chance that an icon may not always be available use
 # the second argument of QIcon.fromTheme() to provide a fallback
 # icon from the freedesktop.org spec.
 
+<<<<<<< Updated upstream
 # BackInTime Logo
 # TODO If we knew for sure that the global var "qapp" exists then
 #      we could use a built-in "standard" Qt icon as fallback if the theme
@@ -68,6 +119,9 @@ if QIcon.fromTheme(ICON_NAME_TO_CHECK).isNull():
 #      => wait for icon.py refactoring than improve this:
 #      qapp.style().standardIcon(QStyle.SP_DialogSaveButton)
 BIT_LOGO = QIcon.fromTheme('backintime')
+=======
+BIT_LOGO = QIcon.fromTheme("backintime")
+>>>>>>> Stashed changes
 
 # Loading depends on dark/light mode and is managed by systrayicon.py itself.
 BIT_LOGO_SYMBOLIC_NAME = 'backintime-symbolic'
