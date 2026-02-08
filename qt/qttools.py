@@ -20,15 +20,19 @@
 # pylint: disable=wrong-import-position,wrong-import-order
 import os
 import sys
+import atexit
 import pwd
 import re
 import json
 import textwrap
 import subprocess
+import tempfile
 from typing import Union, Iterable, Callable
+from pathlib import Path
 from contextlib import contextmanager
 from textdlg import TextDialog
-from PyQt6.QtGui import (QDesktopServices,
+from PyQt6.QtGui import (QCursor,
+                         QDesktopServices,
                          QGuiApplication,
                          QFontMetricsF,
                          QIcon,
@@ -38,7 +42,6 @@ from PyQt6.QtCore import (QEvent,
                           QLocale,
                           Qt,
                           QObject,
-                          QT_VERSION_STR,
                           QTranslator,
                           QUrl)
 from PyQt6.QtWidgets import (QApplication,
@@ -47,8 +50,8 @@ from PyQt6.QtWidgets import (QApplication,
                              QStyle,
                              QStyleFactory,
                              QSystemTrayIcon,
+                             QToolTip,
                              QWidget)
-from packaging.version import Version
 from qttools_path import register_backintime_path
 register_backintime_path('common')
 import tools  # noqa: E402
@@ -259,23 +262,83 @@ def create_info_label(
         icon_size: QStyle.PixelMetric = QStyle.PixelMetric.PM_LargeIconSize,
         icon_scale_factor: float | int = None,
         fixed_size_widget: bool = True) -> QLabel:
-    """Return a widget with an warning icon and text.
+    """Return a widget with an info icon and text.
 
     See `create_icon_label` for details.
     """
     ico = create_icon_label_info(
         icon_size, icon_scale_factor, fixed_size_widget)
+
+    return _combine_icon_with_label(ico, text)
+
+
+def create_warning_label(
+        text: str,
+        icon_size: QStyle.PixelMetric = QStyle.PixelMetric.PM_LargeIconSize,
+        icon_scale_factor: float | int = None,
+        fixed_size_widget: bool = True) -> QLabel:
+    """Return a widget with a warning icon and text.
+
+    See `create_icon_label` for details.
+    """
+    ico = create_icon_label_warning(
+        icon_size, icon_scale_factor, fixed_size_widget)
+
+    return _combine_icon_with_label(ico, text)
+
+
+def _combine_icon_with_label(icon: QLabel, text: str) -> QWidget:
+    """Horizontally combine the given `icon` with a text label
+
+    Args:
+        icon: A `QLabel` containing an icon used as first item in the
+            horizontal layout.
+        text: The text used in a `Qlabel` as second item in the horizontal
+            layout.
+
+    Returns:
+        A widget with horizontal layout containing an icon label and a text
+            label.
+    """
     txt = QLabel(text)
     txt.setWordWrap(True)
 
+    # Show URL in tooltip without anoing http-protocol prefix.
+    if '<a href' in text:
+        txt.setOpenExternalLinks(True)
+        txt.linkHovered.connect(
+            lambda url: QToolTip.showText(
+                QCursor.pos(), url.replace('https://', ''))
+        )
+
     layout = QHBoxLayout()
-    layout.addWidget(ico)
+    layout.addWidget(icon)
     layout.addWidget(txt)
 
     label = QWidget()
     label.setLayout(layout)
 
     return label
+
+
+def create_qicon_from_svg_source(svg_source: str) -> QIcon:
+    """Create a QIcon instance based on SVG/XML source.
+
+    QIcon is not capable of reading from a byte stream.
+    This workaround write the SVG/XML-string to a temporary in-RAM file
+    before QIcon reads it back.
+    """
+
+    svg_fn = None
+
+    with tempfile.NamedTemporaryFile(suffix='.svg', mode='w', delete=False
+                                     ) as handle:
+        handle.write(svg_source)
+        svg_fn = handle.name
+
+    atexit.register(Path(svg_fn).unlink)
+
+    return QIcon(svg_fn)
 
 
 def custom_sort_order(header, loop, new_column, new_order):
@@ -400,7 +463,8 @@ def screen_width_in_chars(widget: QWidget, reference_char: str = 'M') -> int:
     char_px = metrics.horizontalAdvance(reference_char)
 
     # Screen width
-    screen = QGuiApplication.screenAt(widget.pos())
+    handle = widget.windowHandle()
+    screen = handle.screen() if handle else QGuiApplication.primaryScreen()
     geom = screen.availableGeometry()
 
     # Screen width in 'em' (number of characters)
@@ -548,11 +612,6 @@ def create_qapplication(app_name=bitbase.APP_NAME) -> QApplication:
     except NameError:
         pass
 
-    if (Version(QT_VERSION_STR) >= Version('5.6')
-            and hasattr(Qt, 'AA_EnableHighDpiScaling')):
-
-        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
-
     qapp = QApplication(sys.argv)
 
     _show_qt_debug_info(qapp)
@@ -581,12 +640,6 @@ def create_qapplication(app_name=bitbase.APP_NAME) -> QApplication:
     except Exception as exc:  # pylint: disable=broad-exception-caught
         logger.warning('Could not set App ID (required for Wayland App icon '
                        f'and more). Reason: {exc}')
-
-    if (bitbase.IS_IN_ROOT_MODE
-            and qapp.style().objectName().lower() == 'windows'
-            and 'GTK+' in QStyleFactory.keys()):
-
-        qapp.setStyle('GTK+')
 
     # With "--debug" arg show the QT QPA platform name in the main window's
     # title
